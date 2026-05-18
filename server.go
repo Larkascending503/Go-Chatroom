@@ -49,26 +49,16 @@ func (this *Server) ListenMessage() {
 
 func (this *Server) Handler(conn net.Conn) {
 	// fmt.Println("Connection established")
-	user := NewUser(conn)
+	user := NewUser(conn, this)
 
-	this.mapLock.Lock()
-	this.OnlineMap[user.Name] = user
-	this.mapLock.Unlock()
-
-	this.Broadcast(user, "login")
+	user.Online()
 
 	reader := bufio.NewReader(conn)
 
 	for {
 		msgBytes, err := reader.ReadBytes('\n')
 		if err != nil {
-			this.Broadcast(user, "logout")
-
-			this.mapLock.Lock()
-			delete(this.OnlineMap, user.Name)
-			this.mapLock.Unlock()
-
-			conn.Close()
+			user.Offline()
 			return
 		}
 
@@ -78,7 +68,7 @@ func (this *Server) Handler(conn net.Conn) {
 			msg = msg[:len(msg)-1]
 		}
 
-		this.Broadcast(user, msg)
+		user.DoMessage(msg)
 	}
 }
 
