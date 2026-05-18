@@ -1,8 +1,8 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
-	"io"
 	"net"
 	"sync"
 )
@@ -57,23 +57,29 @@ func (this *Server) Handler(conn net.Conn) {
 
 	this.Broadcast(user, "login")
 
-	go func() {
-		buf := make([]byte, 4096)
-		for {
-			n, err := conn.Read(buf)
-			if n == 0 {
-				this.Broadcast(user, "logout")
-				return
-			}
-			if err != nil && err != io.EOF {
-				fmt.Println("Conn Read err:", err)
-				return
-			}
+	reader := bufio.NewReader(conn)
 
-			msg := string(buf[:n-1])
-			this.Broadcast(user, msg)
+	for {
+		msgBytes, err := reader.ReadBytes('\n')
+		if err != nil {
+			this.Broadcast(user, "logout")
+
+			this.mapLock.Lock()
+			delete(this.OnlineMap, user.Name)
+			this.mapLock.Unlock()
+
+			conn.Close()
+			return
 		}
-	}()
+
+		msg := string(msgBytes)
+
+		if len(msg) > 0 && msg[len(msg)-1] == '\n' {
+			msg = msg[:len(msg)-1]
+		}
+
+		this.Broadcast(user, msg)
+	}
 }
 
 // Start server
