@@ -54,6 +54,18 @@ func (this *User) Offline() {
 	this.server.Broadcast(this, "logout")
 }
 
+func (this *User) sendMsg(msg string) {
+	this.conn.Write([]byte(msg + "\n"))
+}
+
 func (this *User) DoMessage(msg string) {
-	this.server.Broadcast(this, msg)
+	if msg == "LIST" {
+		this.server.mapLock.RLock()
+		for _, user := range this.server.OnlineMap {
+			onlineMsg := "[" + user.Addr + "]" + user.Name + ": " + "online...\n"
+			this.sendMsg(onlineMsg)
+		}
+	} else {
+		this.server.Broadcast(this, msg)
+	}
 }
