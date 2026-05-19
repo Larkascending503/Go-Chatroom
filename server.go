@@ -61,7 +61,7 @@ func (this *Server) Handler(conn net.Conn) {
 
 	// set a timer
 	go func() {
-		timer := time.NewTimer(time.Second * 10)
+		timer := time.NewTimer(time.Second * 60)
 		defer timer.Stop()
 
 		for {
@@ -73,7 +73,7 @@ func (this *Server) Handler(conn net.Conn) {
 					default:
 					}
 				}
-				timer.Reset(time.Second * 10)
+				timer.Reset(time.Second * 60)
 
 			case <-timer.C:
 				user.sendMsg("You have been kicked out due to 10 seconds of inactivity.\n")

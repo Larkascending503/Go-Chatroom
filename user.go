@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"net"
 	"strings"
 )
@@ -59,6 +60,10 @@ func (this *User) sendMsg(msg string) {
 	this.conn.Write([]byte(msg + "\n"))
 }
 
+// LIST -> ask for user list
+// RENAME|newName -> rename username
+// PVT|toUser|msg -> private message
+// Default: Broadcast
 func (this *User) DoMessage(msg string) {
 	if msg == "LIST" {
 		this.server.mapLock.RLock()
@@ -82,6 +87,30 @@ func (this *User) DoMessage(msg string) {
 			this.server.mapLock.Unlock()
 			this.Name = newName
 			this.sendMsg("Successfully renamed to " + newName + "\n")
+		}
+	} else if len(msg) > 4 && msg[:4] == "PVT|" {
+		remoteName := strings.Split(msg, "|")[1]
+
+		if remoteName == "" {
+			this.sendMsg("Invalid name\n")
+			return
+		}
+
+		this.server.mapLock.RLock()
+		remoteUser, ok := this.server.OnlineMap[remoteName]
+		this.server.mapLock.RUnlock()
+
+		if !ok {
+			this.sendMsg("User not found\n")
+			return
+		} else {
+			content := strings.Split(msg, "|")[2]
+			if content == "" {
+				this.sendMsg("Invalid message\n")
+				return
+			}
+			payload := fmt.Sprintf("[%s]: %s", this.Name, content)
+			remoteUser.sendMsg(payload)
 		}
 	} else {
 		this.server.Broadcast(this, msg)
