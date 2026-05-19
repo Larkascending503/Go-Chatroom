@@ -1,5 +1,7 @@
 # Go Chatroom
 
+> [中文版本](README_zh.md)
+
 A simple TCP-based chatroom system built with Go, supporting multiple concurrent users with broadcast messaging, private messaging, and more.
 
 ## Features
