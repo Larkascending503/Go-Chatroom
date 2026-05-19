@@ -31,5 +31,13 @@ func NewClient(ServerIp string, ServerPort int) *Client {
 
 func main() {
 	client := NewClient("127.0.0.1", 8888)
+	if client == nil {
+		fmt.Println(">>>>> Failed to connect server")
+		return
+	} else {
+		fmt.Println(">>>>> Connected to server")
+	}
+
+	select {}
 
 }
