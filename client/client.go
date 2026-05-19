@@ -3,7 +3,9 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
 	"net"
+	"os"
 )
 
 type Client struct {
@@ -57,21 +59,98 @@ func (client *Client) menu() bool {
 	}
 }
 
+func (client *Client) UpdateName() bool {
+	fmt.Println(">>>>> Please input new name:")
+	fmt.Scanln(&client.Name)
+	sendMsg := "RENAME|" + client.Name + "\n"
+	_, err := client.conn.Write([]byte(sendMsg))
+
+	if err != nil {
+		fmt.Println("conn.Write err:", err)
+		return false
+	}
+
+	return true
+}
+
+func (client *Client) Broadcast() {
+	var charMsg string
+	fmt.Println(">>>>> Please input message(exit to quit):")
+	fmt.Scanln(&charMsg)
+
+	for charMsg != "exit" {
+		if len(charMsg) != 0 {
+			sendMsg := charMsg + "\n"
+			_, err := client.conn.Write([]byte(sendMsg))
+			if err != nil {
+				fmt.Println("conn.Write err:", err)
+				break
+			}
+		}
+		charMsg = ""
+		fmt.Println(">>>>> Please input message(exit to quit):")
+		fmt.Scanln(&charMsg)
+	}
+}
+
+func (client *Client) SelectUsers() {
+	sendMsg := "LIST\n"
+	_, err := client.conn.Write([]byte(sendMsg))
+	if err != nil {
+		fmt.Println("conn.Write err:", err)
+		return
+	}
+}
+func (client *Client) Private() {
+	client.SelectUsers()
+	fmt.Println(">>>>> Please input user name(exit to quit):")
+
+	var remoteName string
+	var msg string
+	fmt.Scanln(&remoteName)
+
+	for remoteName != "exit" {
+		fmt.Println(">>>>> Please input message(exit to quit):")
+		fmt.Scanln(&msg)
+
+		for msg != "exit" {
+			if msg != "" {
+				sendMsg := "PVT|" + remoteName + "|" + msg + "\n"
+				_, err := client.conn.Write([]byte(sendMsg))
+				if err != nil {
+					fmt.Println("conn.Write err:", err)
+					return
+				}
+			}
+
+			msg = ""
+			fmt.Println(">>>>> Please input message(exit to quit):")
+			fmt.Scanln(&msg)
+		}
+
+		remoteName = ""
+		fmt.Println(">>>>> Please input user name(exit to quit):")
+		fmt.Scanln(&remoteName)
+	}
+}
+
+func (client *Client) DealResponer() {
+	io.Copy(os.Stdout, client.conn)
+}
 func (client *Client) Run() {
 	for client.flag != 0 {
 		for client.menu() != true {
-
 		}
 		switch client.flag {
 		case 1:
-			fmt.Println("Broadcast")
-
+			client.Broadcast()
 		case 2:
-			fmt.Println("Private")
-
+			client.Private()
 		case 3:
-			fmt.Println("Rename")
-
+			client.UpdateName()
+		case 0:
+			fmt.Println("Exit")
+			return
 		}
 	}
 }
@@ -79,6 +158,9 @@ func main() {
 	flag.Parse()
 
 	client := NewClient(serverIP, serverPort)
+
+	client.DealResponer()
+
 	if client == nil {
 		fmt.Println(">>>>> Failed to connect server")
 		return
@@ -86,6 +168,6 @@ func main() {
 		fmt.Println(">>>>> Connected to server")
 	}
 
-	select {}
+	client.Run()
 
 }
