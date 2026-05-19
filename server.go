@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"sync"
+	"time"
 )
 
 type Server struct {
@@ -53,8 +54,36 @@ func (this *Server) Handler(conn net.Conn) {
 
 	user.Online()
 
+	// Monitor user
+	isLive := make(chan bool)
+
 	reader := bufio.NewReader(conn)
 
+	// set a timer
+	go func() {
+		timer := time.NewTimer(time.Second * 10)
+		defer timer.Stop()
+
+		for {
+			select {
+			case <-isLive:
+				if !timer.Stop() {
+					select {
+					case <-timer.C:
+					default:
+					}
+				}
+				timer.Reset(time.Second * 10)
+
+			case <-timer.C:
+				user.sendMsg("You have been kicked out due to 10 seconds of inactivity.\n")
+				conn.Close()
+				return
+			}
+		}
+	}()
+
+	// read message
 	for {
 		msgBytes, err := reader.ReadBytes('\n')
 		if err != nil {
@@ -69,6 +98,11 @@ func (this *Server) Handler(conn net.Conn) {
 		}
 
 		user.DoMessage(msg)
+		// Any incoming message indicates the user is active
+		select {
+		case isLive <- true:
+		default:
+		}
 	}
 }
 
