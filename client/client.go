@@ -159,7 +159,7 @@ func main() {
 
 	client := NewClient(serverIP, serverPort)
 
-	client.DealResponer()
+	go client.DealResponer()
 
 	if client == nil {
 		fmt.Println(">>>>> Failed to connect server")
